@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
+using Authentication;
 
 namespace husarbeid
 {
@@ -26,35 +27,32 @@ namespace husarbeid
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
+            _key = Encoding.ASCII.GetBytes(Configuration.GetSection("JwtConfig").GetSection("secret").Value);
         }
         public IConfiguration Configuration { get; }
+        public byte[] _key { get; }
 
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddPooledDbContextFactory<ApplicationDbContext>(
                   options => options.UseSqlite(Configuration.GetConnectionString("Sqlite")));
 
-            var secret = Configuration.GetSection("JwtConfig").GetSection("secret").Value;
-            var key = Encoding.ASCII.GetBytes(secret);
-            services.AddAuthentication(x =>
-            {
-                x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-            })
-            .AddJwtBearer(x =>
+
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(x =>
             {
                 x.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(key),
+                    IssuerSigningKey = new SymmetricSecurityKey(_key),
                     ValidateIssuer = false,
                     ValidateAudience = false,
                     ValidateLifetime = true,
-                    ValidIssuer = Configuration.GetSection("JwtConfig").GetSection("Issuer").Value,
-                    ValidAudience = Configuration.GetSection("JwtConfig").GetSection("Audience").Value,
                     ClockSkew = TimeSpan.Zero
                 };
             });
+
+            services.AddScoped<TokenService>();
+            services.AddAuthorization();
 
             services
                 .AddGraphQLServer()
@@ -90,6 +88,8 @@ namespace husarbeid
             }
 
             app.UseRouting();
+            app.UseAuthentication();
+            app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
             {

@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using Authentication;
 using HotChocolate;
 using HotChocolate.Types;
 using husarbeid.Common;
@@ -13,7 +14,8 @@ namespace husarbeid.Users
         [UseApplicationDbContext]
         public async Task<AddUserPayload> AddUserAsync(
             AddUserInput input,
-            [ScopedService] ApplicationDbContext context)
+            [ScopedService] ApplicationDbContext context,
+            [Service] TokenService tokenService)
         {
             var user = new User
             {
@@ -25,7 +27,7 @@ namespace husarbeid.Users
             context.Users.Add(user);
             await context.SaveChangesAsync();
 
-            return new AddUserPayload(user);
+            return new AddUserPayload(user, tokenService.Create(user));
         }
 
         [UseApplicationDbContext]
