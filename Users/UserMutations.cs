@@ -1,9 +1,13 @@
+using System.Linq;
 using System.Threading.Tasks;
 using Authentication;
 using HotChocolate;
+using HotChocolate.Execution;
 using HotChocolate.Types;
 using husarbeid.Common;
 using husarbeid.Data;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using BC = BCrypt.Net.BCrypt;
 
 namespace husarbeid.Users
@@ -15,7 +19,7 @@ namespace husarbeid.Users
         public async Task<AddUserPayload> AddUserAsync(
             AddUserInput input,
             [ScopedService] ApplicationDbContext context,
-            [Service] TokenService tokenService)
+            [Service] ITokenService tokenService)
         {
             var user = new User
             {
@@ -31,16 +35,40 @@ namespace husarbeid.Users
         }
 
         [UseApplicationDbContext]
-        public async Task<ClaimTaskPayload> ClaimTask(
-            ClaimTaskInput input,
-            [ScopedService] ApplicationDbContext context)
+        public LoginUserPayload LoginUser(
+            LoginUserInput input,
+            [ScopedService] ApplicationDbContext context,
+            [Service] ITokenService tokenService)
         {
-            User user = await context.Users.FindAsync(input.UserId);
+            var user = context.Users.Where(u => u.Username == input.Name).FirstOrDefault();
+            if (user == null || !BC.Verify(input.Password, user.HashedPassword))
+            {
+                return new LoginUserPayload(
+                    new[] { new UserError("Wrong username or password.", "WRONG_USERNAME_OR_PW") });
+            }
 
-            if (user is null)
+            return new LoginUserPayload(user, tokenService.Create(user));
+        }
+
+        //[UserIsOwner]
+        [UseApplicationDbContext]
+        public async Task<ClaimTaskPayload> ClaimTask(
+            [GlobalStateAttribute("currentUserId")] int? currentUserId,
+            ClaimTaskInput input,
+            [ScopedService] ApplicationDbContext context
+            )
+        {
+            if (currentUserId == null)
             {
                 return new ClaimTaskPayload(
-                    new UserError("User not found.", "USER_NOT_FOUND"));
+                    new UserError("Not owner", "NOT_ALLOWED"));
+            }
+
+            User user = await context.Users.FindAsync(currentUserId);
+            if (user == null)
+            {
+                return new ClaimTaskPayload(
+                    new UserError("User not valid", "USER_NOT_VALID"));
             }
 
             foreach (var taskId in input.TaskIds)

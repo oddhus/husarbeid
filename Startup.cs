@@ -34,6 +34,8 @@ namespace husarbeid
 
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddHttpContextAccessor();
+
             services.AddPooledDbContextFactory<ApplicationDbContext>(
                   options => options.UseSqlite(Configuration.GetConnectionString("Sqlite")));
 
@@ -51,8 +53,8 @@ namespace husarbeid
                 };
             });
 
-            services.AddScoped<TokenService>();
-            services.AddAuthorization();
+            services.AddSingleton<ITokenService, TokenService>();
+            //services.AddScoped<IUserRepository, UserRepository>();
 
             services
                 .AddGraphQLServer()
@@ -71,10 +73,14 @@ namespace husarbeid
                 .AddDataLoader<UserByIdDataLoader>()
                 .AddDataLoader<FamilyByIdDataLoader>()
                 .AddDataLoader<FamilyTaskByIdDataLoader>()
-                .AddHttpRequestInterceptor((ctx, executor, builder, ct) =>
+                .AddHttpRequestInterceptor((context, executor, builder, ct) =>
                     {
-                        var identity = new ClaimsIdentity();
-                        ctx.User.AddIdentity(identity);
+                        string userId = "";
+                        if (context.User.Identity.IsAuthenticated)
+                        {
+                            userId = context.User.FindFirst(ClaimTypes.NameIdentifier).Value;
+                        }
+                        builder.AddProperty("currentUserId", string.IsNullOrEmpty(userId) ? null : Int32.Parse(userId));
                         return ValueTask.CompletedTask;
                     });
         }
@@ -89,7 +95,6 @@ namespace husarbeid
 
             app.UseRouting();
             app.UseAuthentication();
-            app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
             {

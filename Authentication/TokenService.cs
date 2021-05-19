@@ -9,7 +9,7 @@ using System.Text;
 
 namespace Authentication
 {
-    public class TokenService
+    public class TokenService : ITokenService
     {
         private readonly string _refreshSecret;
         private readonly string _secret;
