@@ -15,11 +15,24 @@ namespace husarbeid.Families
         [UseApplicationDbContext]
         public async Task<AddFamilyPayload> AddFamilyAsync(
             AddFamilyInput input,
+            [GlobalStateAttribute("currentUserId")] int? currentUserId,
             [ScopedService] ApplicationDbContext context,
             CancellationToken cancellationToken)
         {
+            if (currentUserId == null)
+            {
+                return new AddFamilyPayload(
+                    new UserError("Please sign in and try again", "NOT_AUTHORIZED"));
+            }
+
             User user = await context.Users.FirstOrDefaultAsync(
-                u => u.Id == input.CreatorId, cancellationToken);
+                u => u.Id == currentUserId, cancellationToken);
+
+            if (user == null)
+            {
+                return new AddFamilyPayload(
+                    new UserError("No valid user was found", "USER_NOT_VALID"));
+            }
 
             var family = new Family
             {
@@ -38,18 +51,30 @@ namespace husarbeid.Families
         [UseApplicationDbContext]
         public async Task<AddFamilyPayload> AddFamilyMembersAsync(
             AddFamilyMembersInput input,
+            [GlobalStateAttribute("currentUserId")] int? currentUserId,
             [ScopedService] ApplicationDbContext context,
             CancellationToken cancellationToken)
         {
-            Family family = await context.Families.FindAsync(input.FamilyId);
-
-            if (family is null)
+            if (currentUserId == null)
             {
                 return new AddFamilyPayload(
-                    new UserError("Family not found.", "FAMILY_NOT_FOUND"));
+                    new UserError("Please sign in and try again", "NOT_AUTHORIZED"));
             }
 
-            User newMember = await context.Users.FindAsync(input.MemberId);
+            User user = await context.Users.FirstOrDefaultAsync(
+                u => u.Id == currentUserId, cancellationToken);
+
+            Family family = await context.Families
+                .FirstOrDefaultAsync(f => f.Id == input.FamilyId, cancellationToken);
+
+            if (family is null || !family.Members.Contains(user))
+            {
+                return new AddFamilyPayload(
+                    new UserError("You can only add members to your own families", "NOT_ALLOWED"));
+            }
+
+            User newMember = await context.Users
+                .FirstOrDefaultAsync(u => u.Id == input.MemberId, cancellationToken);
 
             if (newMember is null)
             {
@@ -58,7 +83,6 @@ namespace husarbeid.Families
             }
 
             family.Members.Add(newMember);
-
             await context.SaveChangesAsync(cancellationToken);
 
             return new AddFamilyPayload(family);

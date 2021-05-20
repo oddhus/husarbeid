@@ -23,5 +23,8 @@ namespace husarbeid.Data
 
         public ICollection<FamilyTask> UserTasks { get; set; } =
             new List<FamilyTask>();
+
+        public ICollection<FamilyTask> UserCreatedTasks { get; set; } =
+            new List<FamilyTask>();
     }
 }

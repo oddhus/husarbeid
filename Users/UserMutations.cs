@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Authentication;
 using HotChocolate;
@@ -8,6 +9,7 @@ using husarbeid.Common;
 using husarbeid.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using BC = BCrypt.Net.BCrypt;
 
 namespace husarbeid.Users
@@ -19,7 +21,8 @@ namespace husarbeid.Users
         public async Task<AddUserPayload> AddUserAsync(
             AddUserInput input,
             [ScopedService] ApplicationDbContext context,
-            [Service] ITokenService tokenService)
+            [Service] ITokenService tokenService,
+            CancellationToken cancellationToken)
         {
             var user = new User
             {
@@ -29,7 +32,7 @@ namespace husarbeid.Users
             };
 
             context.Users.Add(user);
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(cancellationToken);
 
             return new AddUserPayload(user, tokenService.Create(user));
         }
@@ -50,25 +53,27 @@ namespace husarbeid.Users
             return new LoginUserPayload(user, tokenService.Create(user));
         }
 
-        //[UserIsOwner]
         [UseApplicationDbContext]
         public async Task<ClaimTaskPayload> ClaimTask(
             [GlobalStateAttribute("currentUserId")] int? currentUserId,
             ClaimTaskInput input,
-            [ScopedService] ApplicationDbContext context
+            [ScopedService] ApplicationDbContext context,
+            CancellationToken cancellationToken
             )
         {
             if (currentUserId == null)
             {
                 return new ClaimTaskPayload(
-                    new UserError("Not owner", "NOT_ALLOWED"));
+                    new UserError("Please sign in and try again", "NOT_AUTHORIZED"));
             }
 
-            User user = await context.Users.FindAsync(currentUserId);
+            User user = await context.Users.FirstOrDefaultAsync(
+                u => u.Id == currentUserId, cancellationToken);
+
             if (user == null)
             {
                 return new ClaimTaskPayload(
-                    new UserError("User not valid", "USER_NOT_VALID"));
+                    new UserError("No valid user was found", "USER_NOT_VALID"));
             }
 
             foreach (var taskId in input.TaskIds)
@@ -81,8 +86,7 @@ namespace husarbeid.Users
                 newTask.AssignedToId = user.Id;
             }
 
-
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(cancellationToken);
 
             return new ClaimTaskPayload(user);
         }

@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using HotChocolate;
 using HotChocolate.Types;
+using husarbeid.Common;
 using husarbeid.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,15 +16,23 @@ namespace husarbeid.FamilyTasks
         [UseApplicationDbContext]
         public async Task<AddFamilyTaskPayload> AddFamilyTaskAsync(
             AddFamilyTaskInput input,
+            [GlobalStateAttribute("currentUserId")] int? currentUserId,
             [ScopedService] ApplicationDbContext context,
             CancellationToken cancellationToken)
         {
+            if (currentUserId == null)
+            {
+                return new AddFamilyTaskPayload(
+                    new UserError("Please sign in and try again", "NOT_AUTHORIZED"));
+            }
+
             var familyTask = new FamilyTask
             {
                 ShortDescription = input.ShortDescription,
                 Payment = input.Payment,
                 FamilyId = input.FamilyId,
-                isCompleted = false
+                isCompleted = false,
+                CreatedById = currentUserId
             };
 
             context.FamilyTasks.Add(familyTask);
