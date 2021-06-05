@@ -18,7 +18,7 @@ namespace husarbeid.Users
     public class UserMutations
     {
         [UseApplicationDbContext]
-        public async Task<AddUserPayload> AddUserAsync(
+        public async Task<AddUserPayload> CreateUserAsync(
             AddUserInput input,
             [ScopedService] ApplicationDbContext context,
             [Service] ITokenService tokenService,
@@ -55,8 +55,8 @@ namespace husarbeid.Users
 
         [UseApplicationDbContext]
         public async Task<ClaimTaskPayload> ClaimTask(
-            [GlobalStateAttribute("currentUserId")] int? currentUserId,
             ClaimTaskInput input,
+            [GlobalStateAttribute("currentUserId")] int? currentUserId,
             [ScopedService] ApplicationDbContext context,
             CancellationToken cancellationToken
             )
@@ -75,7 +75,6 @@ namespace husarbeid.Users
                 return new ClaimTaskPayload(
                     new UserError("No valid user was found", "USER_NOT_VALID"));
             }
-
             foreach (var taskId in input.TaskIds)
             {
                 var newTask = new FamilyTask
@@ -90,6 +89,5 @@ namespace husarbeid.Users
 
             return new ClaimTaskPayload(user);
         }
-
     }
 }

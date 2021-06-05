@@ -13,7 +13,7 @@ namespace husarbeid.Families
     public class FamilyMutations
     {
         [UseApplicationDbContext]
-        public async Task<AddFamilyPayload> AddFamilyAsync(
+        public async Task<AddFamilyPayload> CreateFamilyAsync(
             AddFamilyInput input,
             [GlobalStateAttribute("currentUserId")] int? currentUserId,
             [ScopedService] ApplicationDbContext context,
