@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,7 +33,9 @@ namespace husarbeid.FamilyTasks
                 Payment = input.Payment,
                 FamilyId = input.FamilyId,
                 isCompleted = false,
-                CreatedById = currentUserId
+                CreatedById = currentUserId,
+                createdOn = DateTime.UtcNow,
+                updatedOn = DateTime.UtcNow
             };
 
             context.FamilyTasks.Add(familyTask);

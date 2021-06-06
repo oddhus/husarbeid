@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using HotChocolate.Types.Relay;
 
 namespace husarbeid.Data
 {
@@ -17,7 +18,7 @@ namespace husarbeid.Data
 
         public DateTime? BirthDate { get; set; }
 
-
+        [ID(nameof(Family))]
         public int? FamilyId { get; set; }
         public Family? Family { get; set; }
 

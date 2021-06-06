@@ -20,5 +20,7 @@ namespace husarbeid.Data
         public int? AssignedToId { get; set; }
         public User? CreatedBy { get; set; }
         public int? CreatedById { get; set; }
+        public DateTime createdOn { get; set; }
+        public DateTime updatedOn { get; set; }
     }
 }
