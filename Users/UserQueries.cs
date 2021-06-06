@@ -32,7 +32,8 @@ namespace husarbeid.Users
 
             User signedInUser = await dataLoader.LoadAsync(currentUserId.GetValueOrDefault(), cancellationToken);
 
-            User foundUser = null;
+            User? foundUser = null;
+
             if (id != null)
             {
                 foundUser = await dataLoader.LoadAsync(id.GetValueOrDefault(), cancellationToken);
