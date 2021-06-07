@@ -31,6 +31,7 @@ namespace husarbeid
         }
         public IConfiguration Configuration { get; }
         public byte[] _key { get; }
+        readonly string AllowAnyOrigin = "_allowAnyOrigin";
 
         public void ConfigureServices(IServiceCollection services)
         {
@@ -38,6 +39,13 @@ namespace husarbeid
 
             services.AddPooledDbContextFactory<ApplicationDbContext>(
                   options => options.UseSqlite(Configuration.GetConnectionString("Sqlite")));
+
+            services.AddCors(o => o.AddPolicy(AllowAnyOrigin, builder =>
+                {
+                    builder.AllowAnyOrigin()
+                        .AllowAnyMethod()
+                        .AllowAnyHeader();
+                }));
 
 
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(x =>
@@ -93,6 +101,7 @@ namespace husarbeid
                 app.UseDeveloperExceptionPage();
             }
 
+            app.UseCors(AllowAnyOrigin);
             app.UseRouting();
             app.UseAuthentication();
 
